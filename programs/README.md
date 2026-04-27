@@ -16,12 +16,12 @@ Three canonical sources, in decreasing order of stability:
 
 ## Expected filenames
 
-The shipping integration test (`crates/hopper-svm/tests/agave_spl_token_cpi.rs`) reads:
+The shipping integration test (`tests/agave_spl_token_cpi.rs`) reads:
 
 ```
-crates/hopper-svm/programs/spl_token.so
-crates/hopper-svm/programs/spl_token_2022.so
-crates/hopper-svm/programs/spl_associated_token_account.so
+programs/spl_token.so
+programs/spl_token_2022.so
+programs/spl_associated_token_account.so
 ```
 
 A test that wants a specific version can use a different name and call the loader by name; the three filenames above are just the integration-test default.
@@ -45,7 +45,7 @@ After these calls, every `process_instruction` whose program ID is `SPL_TOKEN_PR
 Once the bytes are in place, run:
 
 ```bash
-cargo test -p hopper-svm --features agave-runtime --test agave_spl_token_cpi
+cargo test --features agave-runtime --test agave_spl_token_cpi
 ```
 
 The test mints, transfers, and burns SPL tokens through the real on-chain program, asserting balances against the mainnet-fidelity execution path.

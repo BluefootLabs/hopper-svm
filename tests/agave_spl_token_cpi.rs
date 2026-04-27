@@ -4,7 +4,7 @@
 //!   - the `agave-runtime` feature, and
 //!   - the presence of `programs/spl_token.so` in the crate root
 //!     (the test author supplies this; see
-//!     `crates/hopper-svm/programs/README.md`).
+//!     `programs/README.md`).
 //!
 //! When both conditions hold, this test:
 //!
@@ -30,7 +30,7 @@
 #![cfg(feature = "agave-runtime")]
 
 #[test]
-#[ignore = "requires the user to supply crates/hopper-svm/programs/spl_token.so; see programs/README.md"]
+#[ignore = "requires the user to supply programs/spl_token.so; see programs/README.md"]
 fn spl_token_transfer_through_agave_runtime() {
     // The macro `include_bytes!` is evaluated at compile time, so we
     // can't conditionally include based on file existence. The
@@ -40,7 +40,7 @@ fn spl_token_transfer_through_agave_runtime() {
     //
     // Authors enabling this test locally:
     //
-    // 1. Place SPL Token `.so` at `crates/hopper-svm/programs/spl_token.so`
+    // 1. Place SPL Token `.so` at `programs/spl_token.so`
     //    (see programs/README.md for canonical sources).
     // 2. Replace this `unimplemented!` body with the loader path
     //    below (currently disabled because the file does not exist
@@ -63,7 +63,7 @@ fn spl_token_transfer_through_agave_runtime() {
     // Until the bytes are staged, this test panics so a stale
     // run-without-ignore surfaces the missing prerequisite clearly.
     panic!(
-        "SPL Token ELF not staged. See crates/hopper-svm/programs/README.md \
+        "SPL Token ELF not staged. See programs/README.md \
          for sourcing instructions."
     );
 }

@@ -7,7 +7,7 @@
 //!
 //! ```toml
 //! [dev-dependencies]
-//! hopper-svm = { workspace = true, features = ["bpf-execution"] }
+//! hopper-svm = { git = "https://github.com/BluefootLabs/hopper-svm", features = ["bpf-execution"] }
 //! ```
 //!
 //! ## Module map

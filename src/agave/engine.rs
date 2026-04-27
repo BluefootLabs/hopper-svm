@@ -545,7 +545,7 @@ mod tests {
     /// the bytes fail verification, the error is propagated.
     /// Real-ELF coverage lives in the SPL Token CPI integration
     /// test (`tests/agave_spl_token_cpi.rs`) which is gated on a
-    /// caller-supplied `.so` (see `crates/hopper-svm/programs/README.md`).
+    /// caller-supplied `.so` (see `programs/README.md`).
     #[test]
     fn load_bpf_program_rejects_malformed_bytes() {
         let eng = AgaveEngine::new();

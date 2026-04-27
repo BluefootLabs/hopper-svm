@@ -1,7 +1,7 @@
 """Core Python bindings for hopper-svm.
 
 This module wraps the ``hopper_svm_ffi`` shared library (built
-from ``crates/hopper-svm-ffi``) through ``cffi``'s ABI mode. The
+from ``hopper-svm-ffi``) through ``cffi``'s ABI mode. The
 public API (:class:`HopperSvm`, :class:`ExecutionResult`,
 :class:`Pubkey`) mirrors the Rust crate one-shot — same builders,
 same accessors, same naming convention shifted to ``snake_case``.
@@ -11,7 +11,7 @@ Implementation notes
 
 - ``cffi`` ABI mode loads the shared library at import time via
   ``ffi.dlopen``. The C header is declared inline below, matching
-  the ``extern "C"`` exports in ``crates/hopper-svm-ffi/src/lib.rs``
+    the ``extern "C"`` exports in ``hopper-svm-ffi/src/lib.rs``
   exactly. Adding a new export to the FFI crate requires updating
   *both* the Rust source and the inline ``cdef`` block here.
 - Strings returned by the FFI (logs, error messages) live behind
@@ -38,7 +38,7 @@ from typing import Iterable, List, Optional, Sequence, Union
 from cffi import FFI
 
 # ----------------------------------------------------------------------
-# CFFI definitions — must match crates/hopper-svm-ffi/src/lib.rs.
+# CFFI definitions — must match hopper-svm-ffi/src/lib.rs.
 # ----------------------------------------------------------------------
 
 ffi = FFI()

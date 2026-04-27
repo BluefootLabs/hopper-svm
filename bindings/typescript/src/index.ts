@@ -1,11 +1,11 @@
 // hopper-svm TypeScript bindings.
 //
 // Wraps the `hopper_svm_ffi` shared library (built from the
-// `crates/hopper-svm-ffi` crate) via koffi — the modern
+// `hopper-svm-ffi` crate) via koffi — the modern
 // zero-build-step ffi for Node. Two layers:
 //
 // 1. The raw FFI surface (`koffi.func` declarations matching the
-//    extern "C" functions in `crates/hopper-svm-ffi/src/lib.rs`).
+//    extern "C" functions in `hopper-svm-ffi/src/lib.rs`).
 //    These map 1:1 to C names; type-safety lives in the wrapper
 //    classes below.
 // 2. A higher-level idiomatic wrapper (`HopperSvm`,

@@ -2,7 +2,7 @@
 
 The :class:`HopperSvm` class wraps the ``hopper_svm_ffi`` shared
 library via ``cffi``'s ABI mode (no compile step required). The
-shared library is built from ``crates/hopper-svm-ffi`` in the
+shared library is built from ``hopper-svm-ffi`` in the
 Hopper workspace::
 
     cargo build --release -p hopper-svm-ffi --features bpf-execution

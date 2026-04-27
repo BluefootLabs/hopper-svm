@@ -2,12 +2,12 @@
   "name": "@hopper/svm",
   "version": "0.1.0",
   "description": "TypeScript bindings for hopper-svm — in-process Solana execution harness for testing Hopper programs without a validator.",
-  "license": "Apache-2.0",
+  "license": "MIT OR Apache-2.0",
   "author": "BluefootLabs <contact@bluefootlabs.com>",
   "homepage": "https://hopperzero.dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/BluefootLabs/Hopper-Solana-Zero-copy-State-Framework.git",
+    "url": "https://github.com/BluefootLabs/hopper-svm.git",
     "directory": "bindings/typescript"
   },
   "main": "dist/index.js",

@@ -32,7 +32,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://hopperzero.dev"
-Repository = "https://github.com/BluefootLabs/Hopper-Solana-Zero-copy-State-Framework"
+Repository = "https://github.com/BluefootLabs/hopper-svm"
 Documentation = "https://hopperzero.dev/docs/svm"
 
 [tool.setuptools]
