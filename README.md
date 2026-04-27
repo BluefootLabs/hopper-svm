@@ -1,5 +1,9 @@
 # hopper-svm
 
+> **Beta / pre-release.** `hopper-svm` is split from the main Hopper framework
+> as a standalone test-harness product. It is not published to crates.io yet;
+> use the Git dependency shown below until the first release is cut.
+
 Hopper-native in-process Solana execution harness with three layered execution modes. Phase 1 ships inline Rust simulators; Phase 2 is `solana-sbpf` direct interpretation; Phase 3 is the real Agave validator stack.
 
 The harness is shaped around how Hopper programs actually want to be tested, with first-class hooks for Hopper headers, layout fingerprints, segment maps, and receipts. Hopper-aware decoders sit on every result type so layout-bearing accounts surface their identity directly.
@@ -51,7 +55,7 @@ let result = svm.process_instruction(&ix, &accounts);
 
 After `with_agave_runtime`, every `process_instruction` whose program ID is registered in the engine's program cache routes through `InvokeContext::process_instruction` instead of the inline registry. Behaviour matches mainnet because it IS the validator's code. The system program is installed automatically; custom builtins register through `agave::AgaveEngine::add_builtin_function(id, account_size, BuiltinFunctionWithContext)`.
 
-End-to-end coverage in `crates/hopper-svm/src/agave/engine.rs::tests::system_transfer_through_agave_runtime` and `crates/hopper-svm/src/lib.rs::tests::process_instruction_routes_through_agave_runtime`: alice 1_000_000 → bob 250_000 transfer dispatches through Agave, balances flow back via `AccountSharedData`, the harness reports `>= 150 CU` consumed (Agave's system program declares that as its baseline).
+End-to-end coverage in `src/agave/engine.rs::tests::system_transfer_through_agave_runtime` and `src/lib.rs::tests::process_instruction_routes_through_agave_runtime`: alice 1_000_000 → bob 250_000 transfer dispatches through Agave, balances flow back via `AccountSharedData`, the harness reports `>= 150 CU` consumed (Agave's system program declares that as its baseline).
 
 ## Usage
 
@@ -59,7 +63,7 @@ Add as a dev-dependency in your program's `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-hopper-svm = { workspace = true }
+hopper-svm = { git = "https://github.com/BluefootLabs/hopper-svm" }
 ```
 
 Then in a test:
@@ -134,4 +138,4 @@ let svm = HopperSvm::new().with_builtin(my_program_id, CounterSimulator);
 
 ## License
 
-Apache-2.0
+MIT OR Apache-2.0.

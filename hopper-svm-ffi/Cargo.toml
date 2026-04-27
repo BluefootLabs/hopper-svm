@@ -2,10 +2,10 @@
 name = "hopper-svm-ffi"
 version = "0.1.0"
 edition = "2021"
-license = "Apache-2.0"
+license = "MIT OR Apache-2.0"
 authors = ["BluefootLabs <contact@bluefootlabs.com>", "MoonManQuark"]
 description = "C-ABI bindings for hopper-svm. The foundation for the TypeScript / Python language bindings — exposes a stable extern \"C\" surface around the in-process Solana execution harness."
-repository = "https://github.com/BluefootLabs/Hopper-Solana-Zero-copy-State-Framework"
+repository = "https://github.com/BluefootLabs/hopper-svm"
 homepage = "https://hopperzero.dev"
 documentation = "https://docs.rs/hopper-svm-ffi"
 readme = "README.md"
@@ -38,5 +38,5 @@ default = []
 bpf-execution = ["hopper-svm/bpf-execution"]
 
 [dependencies]
-hopper-svm = { path = "../hopper-svm", version = "0.1.0" }
+hopper-svm = { path = "..", version = "0.1.0" }
 solana-sdk = "2.1"

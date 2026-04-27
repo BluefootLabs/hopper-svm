@@ -2,15 +2,19 @@
 name = "hopper-svm"
 version = "0.1.0"
 edition = "2021"
-license = "Apache-2.0"
+license = "MIT OR Apache-2.0"
 authors = ["BluefootLabs <contact@bluefootlabs.com>", "MoonManQuark"]
 description = "Hopper-native in-process Solana execution harness for testing Hopper programs without a validator."
-repository = "https://github.com/BluefootLabs/Hopper-Solana-Zero-copy-State-Framework"
+repository = "https://github.com/BluefootLabs/hopper-svm"
 homepage = "https://hopperzero.dev"
 documentation = "https://docs.rs/hopper-svm"
 readme = "README.md"
 keywords = ["solana", "test", "svm", "hopper", "harness"]
 categories = ["development-tools::testing"]
+
+[workspace]
+members = [".", "hopper-svm-ffi"]
+resolver = "2"
 
 # Hopper-native execution engine. Owns the harness, the syscall layer
 # (Phase 2), CPI dispatch (Phase 2.1), the compute meter, the log
