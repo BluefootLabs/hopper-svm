@@ -18,7 +18,7 @@ Three canonical sources, in decreasing order of stability:
 
 The shipping integration test (`tests/agave_spl_token_cpi.rs`) reads:
 
-```
+```text
 programs/spl_token.so
 programs/spl_token_2022.so
 programs/spl_associated_token_account.so

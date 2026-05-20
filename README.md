@@ -94,15 +94,16 @@ fn alice_transfers_to_bob() {
 ## API
 
 | Method | Behavior |
-|--------|----------|
+| ------ | -------- |
 | `HopperSvm::new()` | Empty harness with system program registered |
 | `.with_builtin(id, program)` | Register a custom built-in for a program ID |
 | `.with_sysvars(sysvars)` | Override clock/rent state |
 | `.set_compute_budget(units)` | Override the per-instruction CU budget |
 | `.process_instruction(&ix, &accts)` | Execute one instruction atomically |
-| `.process_instruction_chain(&[ix], &accts)` | Execute many as one chain — state carries forward |
+| `.process_instruction_chain(&[ix], &accts)` | Execute many as one chain; state carries forward |
 
 `HopperExecutionResult`:
+
 - `assert_success()` / `assert_error_contains(needle)` / `is_success()` / `is_error()`
 - `account(&pubkey)` returns the post-execution `KeyedAccount`
 - `compute_units_consumed()`, `return_data()`, `resulting_accounts()`, `all_logs()`, `decoded_logs()`
