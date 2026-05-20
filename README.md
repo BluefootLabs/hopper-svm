@@ -4,7 +4,7 @@
 > as a standalone test-harness product. It is not published to crates.io yet;
 > use the Git dependency shown below until the first release is cut.
 
-Hopper-native in-process Solana execution harness with three layered execution modes. Phase 1 ships inline Rust simulators; Phase 2 is `solana-sbpf` direct interpretation; Phase 3 is the real Agave validator stack.
+Hopper-native in-process Solana execution harness with layered execution modes. The default build ships inline Rust simulators for fast tests. `agave-runtime` enables the real Agave validator stack for mainnet-fidelity execution. `bpf-execution` is retained as a compatibility feature for callers that already typed against the older BPF registration API; internally it now routes through Agave as well.
 
 The harness is shaped around how Hopper programs actually want to be tested, with first-class hooks for Hopper headers, layout fingerprints, segment maps, and receipts. Hopper-aware decoders sit on every result type so layout-bearing accounts surface their identity directly.
 
@@ -25,9 +25,9 @@ Plus the full Quasar-parity verb surface:
 - Stateful overlay: `set_account` / `get_account` / `airdrop` / `create_account` / `set_token_balance` / `set_mint_supply` / `snapshot_accounts` / `restore_accounts` plus the `*_with_store` dispatch pair.
 - Result enrichment: `assert_success` / `assert_error` / `assert_inner_instruction_count` / `compute_units_consumed` / `execution_time_us` / `inner_instructions` / `decode_header` / `hopper_accounts` / `decoded_logs`.
 
-## Phase 2 (`bpf-execution` feature) — direct `solana-sbpf`
+## Compatibility (`bpf-execution` feature)
 
-Real `.so` execution via [`solana-sbpf`](https://crates.io/crates/solana-sbpf), Anza's canonical eBPF interpreter. Lower-fidelity than Phase 3 because syscall semantics and CPI dispatch are reimplemented here rather than delegated to the validator stack.
+Backwards-compatible `.so` registration API backed by Agave. Existing calls such as `add_program_from_bytes`, `with_program`, and `with_program_loader` keep working, but the bytes are loaded by `solana-bpf-loader-program` and executed by `solana-program-runtime` rather than Hopper's retired direct-SBPF shim.
 
 API surface:
 
@@ -36,9 +36,9 @@ API surface:
 - `with_program(id, elf)` / `with_program_loader(id, loader, elf)` builder verbs.
 - `with_bundled_spl_token(elf)` / `with_bundled_spl_token_2022(elf)` / `with_bundled_spl_associated_token(elf)` for caller-supplied SPL ELFs (registered under V2, the mainnet-deployment loader).
 
-## Phase 3 (`agave-runtime` feature) — real Agave validator stack
+## Mainnet-fidelity mode (`agave-runtime` feature)
 
-Mainnet-fidelity path. Replaces inline simulators with the same crates the validator runs:
+Mainnet-fidelity path. Routes execution through the same crates the validator runs:
 
 - `solana-program-runtime` for the invoke stack
 - `solana-bpf-loader-program` for ELF loading (Loader v2 + Loader-v3-Upgradeable)
@@ -53,7 +53,7 @@ let svm = HopperSvm::new().with_agave_runtime();
 let result = svm.process_instruction(&ix, &accounts);
 ```
 
-After `with_agave_runtime`, every `process_instruction` whose program ID is registered in the engine's program cache routes through `InvokeContext::process_instruction` instead of the inline registry. Behaviour matches mainnet because it IS the validator's code. The system program is installed automatically; custom builtins register through `agave::AgaveEngine::add_builtin_function(id, account_size, BuiltinFunctionWithContext)`.
+After `with_agave_runtime`, every `process_instruction` whose program ID is registered in the engine's program cache routes through `InvokeContext::process_instruction` instead of the inline registry. Behaviour matches mainnet because it is the validator's code. The system program is installed automatically; custom builtins register through `agave::AgaveEngine::add_builtin_function(id, account_size, BuiltinFunctionWithContext)`.
 
 End-to-end coverage in `src/agave/engine.rs::tests::system_transfer_through_agave_runtime` and `src/lib.rs::tests::process_instruction_routes_through_agave_runtime`: alice 1_000_000 → bob 250_000 transfer dispatches through Agave, balances flow back via `AccountSharedData`, the harness reports `>= 150 CU` consumed (Agave's system program declares that as its baseline).
 

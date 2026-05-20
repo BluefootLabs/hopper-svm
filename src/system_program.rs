@@ -29,7 +29,7 @@ use crate::builtin::{BuiltinProgram, InvokeContext};
 use crate::compute::ComputeBudget;
 use crate::error::HopperSvmError;
 use solana_sdk::pubkey::Pubkey;
-use solana_sdk::system_program;
+use solana_system_interface::program as system_program;
 
 /// The system program's invariant CU cost. Mainnet charges 150 CU
 /// for a system-program transfer; pin to that here so tests that

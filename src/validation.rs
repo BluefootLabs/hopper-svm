@@ -76,7 +76,7 @@ use crate::account::KeyedAccount;
 use crate::error::HopperSvmError;
 use solana_sdk::instruction::AccountMeta;
 use solana_sdk::pubkey::Pubkey;
-use solana_sdk::system_program;
+use solana_system_interface::program as system_program;
 
 /// Validation policy. `Strict` is the default; `Lax` disables
 /// every rule — useful for fast unit tests where the program

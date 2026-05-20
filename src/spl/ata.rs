@@ -56,7 +56,7 @@ use crate::compute::ComputeBudget;
 use crate::error::HopperSvmError;
 use solana_program_pack::Pack;
 use solana_sdk::pubkey::Pubkey;
-use solana_sdk::system_program;
+use solana_system_interface::program as system_program;
 use spl_token::state::{Account as TokenAccount, AccountState};
 
 /// SPL Associated Token Account program ID, hard-coded as the legacy

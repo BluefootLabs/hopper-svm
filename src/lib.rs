@@ -42,22 +42,13 @@
 //!   bytes (the layout-aware decoders work the same whether the
 //!   account state was produced by a built-in or a future BPF run).
 //!
-//! ## Phase 2 (planned)
+//! ## Compatibility BPF path
 //!
-//! Wires [`solana-sbpf`] (Anza's canonical eBPF interpreter, the
-//! foundation Mollusk and Agave both wrap) as the execution engine
-//! for real `.so` files, plus the full Solana syscall surface
-//! (`sol_log`, `sol_log_pubkey`, `sol_panic_`, `sol_memcpy_`,
-//! `sol_memset_`, `sol_memcmp_`, `sol_memmove_`, `sol_alloc_free_`,
-//! `sol_get_clock_sysvar`, `sol_get_rent_sysvar`,
-//! `sol_create_program_address`, `sol_try_find_program_address`,
-//! `sol_invoke_signed`, `sol_log_compute_units`,
-//! `sol_log_data`), CPI dispatch back into the harness, account
-//! input-buffer serialization, and the realloc + return-data
-//! conventions. The seam is already in place — see
-//! [`engine::Engine`] — so Phase 2 lands as one new
-//! `BpfEngine` impl plus a single line in
-//! [`HopperSvm::new`].
+//! The `bpf-execution` feature retains the older BPF registration
+//! surface for callers that already typed against it. Registered
+//! ELFs are loaded and executed through Agave, so loading, syscall
+//! behaviour, CPI dispatch, sysvar handling, and account serialization
+//! use Solana's validator crates.
 //!
 //! ## Quick start
 //!
@@ -82,8 +73,6 @@
 //! assert_eq!(result.account(&bob).unwrap().lamports, 1_000_000);
 //! ```
 //!
-//! [`solana-sbpf`]: https://crates.io/crates/solana-sbpf
-
 #![forbid(unsafe_code)]
 
 pub mod account;
@@ -215,10 +204,10 @@ pub struct HopperSvm {
     /// programs that exceed the budget abort with
     /// [`HopperSvmError::OutOfComputeUnits`].
     pub(crate) budget: Arc<Mutex<ComputeBudget>>,
-    /// Phase 2 BPF engine — feature-gated. Holds the registry of
-    /// program-id → ELF bytes that `add_program` populates. When
+    /// Agave-backed BPF compatibility engine. Holds the registry of
+    /// program-id -> ELF bytes that `add_program` populates. When
     /// the built-in registry misses, `dispatch_one` falls through
-    /// here.
+    /// here and executes through Solana's loader/runtime crates.
     #[cfg(feature = "bpf-execution")]
     pub(crate) bpf_engine: bpf::BpfEngine,
     /// Pending CU limit override — written by the compute-budget
@@ -478,28 +467,27 @@ impl HopperSvm {
         )
     }
 
-    /// Phase 2: register a `.so` BPF program by ID. Reads
+    /// Register a `.so` BPF program by ID. Reads
     /// `target/deploy/<name>.so` from the cargo workspace root
     /// (the standard `cargo build-sbf` output path) and stores
     /// the bytes against `id`. Subsequent `process_instruction`
-    /// calls whose `program_id` matches dispatch into the BPF
-    /// engine.
+    /// calls whose `program_id` matches dispatch through Agave.
     ///
     /// Feature-gated: only available with `--features bpf-execution`.
-    /// Phase 1 builds — the default — surface a clear "Phase 2 not
-    /// enabled" error if a program is invoked without a built-in
-    /// registered for it.
+    /// The feature is a compatibility alias over `agave-runtime`.
     #[cfg(feature = "bpf-execution")]
     pub fn add_program(&self, id: &Pubkey, name: &str) -> Result<(), std::io::Error> {
         let path = std::path::Path::new("target")
             .join("deploy")
             .join(format!("{name}.so"));
         let elf = std::fs::read(&path)?;
-        self.bpf_engine.add_elf(id, elf);
+        self.bpf_engine
+            .add_elf(id, elf)
+            .map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidData, err.to_string()))?;
         Ok(())
     }
 
-    /// Phase 2: register a `.so` BPF program from in-memory bytes.
+    /// Register a `.so` BPF program from in-memory bytes.
     /// Useful for tests that compile and embed the program via
     /// `include_bytes!` rather than reading from `target/deploy`.
     /// Defaults to [`bpf::engine::LoaderKind::V3`] (the modern
@@ -508,10 +496,10 @@ impl HopperSvm {
     /// or any other v2-deployed binary.
     #[cfg(feature = "bpf-execution")]
     pub fn add_program_from_bytes(&self, id: &Pubkey, elf: Vec<u8>) {
-        self.bpf_engine.add_elf(id, elf);
+        let _ = self.bpf_engine.add_elf(id, elf);
     }
 
-    /// Phase 2: register a BPF program with an explicit loader kind.
+    /// Register a BPF program with an explicit loader kind.
     /// Mirrors `quasar-svm`'s `add_program(id, loader, elf)`.
     /// SPL Token, Memo, and Token-2022 are all V2-deployed on
     /// mainnet; everything Anchor-shipped or Hopper-shipped is V3.
@@ -522,7 +510,7 @@ impl HopperSvm {
         loader: bpf::engine::LoaderKind,
         elf: Vec<u8>,
     ) {
-        self.bpf_engine.add_elf_with_loader(id, elf, loader);
+        let _ = self.bpf_engine.add_elf_with_loader(id, elf, loader);
     }
 
     /// Builder-style sibling of [`add_program_from_bytes`].
@@ -530,7 +518,7 @@ impl HopperSvm {
     /// V3 loader.
     #[cfg(feature = "bpf-execution")]
     pub fn with_program(self, id: Pubkey, elf: Vec<u8>) -> Self {
-        self.bpf_engine.add_elf(&id, elf);
+        let _ = self.bpf_engine.add_elf(&id, elf);
         self
     }
 
@@ -544,7 +532,7 @@ impl HopperSvm {
         loader: bpf::engine::LoaderKind,
         elf: Vec<u8>,
     ) -> Self {
-        self.bpf_engine.add_elf_with_loader(&id, elf, loader);
+        let _ = self.bpf_engine.add_elf_with_loader(&id, elf, loader);
         self
     }
 
@@ -567,7 +555,7 @@ impl HopperSvm {
     /// default feature set.
     #[cfg(feature = "bpf-execution")]
     pub fn with_bundled_spl_token(self, elf: Vec<u8>) -> Self {
-        self.bpf_engine.add_elf_with_loader(
+        let _ = self.bpf_engine.add_elf_with_loader(
             &SPL_TOKEN_PROGRAM_ID,
             elf,
             bpf::engine::LoaderKind::V2,
@@ -581,7 +569,7 @@ impl HopperSvm {
     /// the V2 loader (Token-2022's mainnet deployment is V2).
     #[cfg(feature = "bpf-execution")]
     pub fn with_bundled_spl_token_2022(self, elf: Vec<u8>) -> Self {
-        self.bpf_engine.add_elf_with_loader(
+        let _ = self.bpf_engine.add_elf_with_loader(
             &SPL_TOKEN_2022_PROGRAM_ID,
             elf,
             bpf::engine::LoaderKind::V2,
@@ -594,7 +582,7 @@ impl HopperSvm {
     /// [`ASSOCIATED_TOKEN_PROGRAM_ID`] under the V2 loader.
     #[cfg(feature = "bpf-execution")]
     pub fn with_bundled_spl_associated_token(self, elf: Vec<u8>) -> Self {
-        self.bpf_engine.add_elf_with_loader(
+        let _ = self.bpf_engine.add_elf_with_loader(
             &ASSOCIATED_TOKEN_PROGRAM_ID,
             elf,
             bpf::engine::LoaderKind::V2,
@@ -1627,41 +1615,16 @@ impl HopperSvm {
             return self.apply_validation(ix, accounts, outcome, policy, logs);
         }
 
-        // Phase 2 fall-through: BPF engine. Only present when the
-        // `bpf-execution` feature is enabled. The CPI dispatcher
-        // closure captures a clone of the harness so a BPF
-        // program issuing `sol_invoke_signed_c` recursively
-        // dispatches back through this same `dispatch_one` (one
-        // depth deeper). The depth check inside `bpf::cpi`
-        // bounds the recursion at `MAX_CPI_DEPTH`.
-        //
-        // The `inner_logs: &mut LogCapture` argument is the OUTER
-        // instruction's log buffer — by passing it through to the
-        // inner dispatch call, the inner program's
-        // `invoke`/`success` framing and `Program log:` lines
-        // append directly to the same transcript. The depth
-        // counter on `LogCapture` already handles indentation
-        // across the boundary.
+        // BPF compatibility fall-through. Program bytes registered
+        // through the old `bpf-execution` API are loaded and run by
+        // Agave, so syscall behaviour, CPI, and account serialization
+        // follow Solana's validator crates.
         #[cfg(feature = "bpf-execution")]
         {
-            let svm_for_cpi = self.clone();
-            let dispatcher: bpf::context::CpiDispatcher = std::sync::Arc::new(
-                move |inner_ix: &Instruction,
-                      inner_accounts: Vec<KeyedAccount>,
-                      inner_logs: &mut LogCapture| {
-                    svm_for_cpi.dispatch_one(inner_ix, &inner_accounts, inner_logs)
-                },
-            );
-            if let Some(outcome) = self.bpf_engine.try_execute(
-                ix,
-                accounts,
-                &mut budget,
-                &sysvars,
-                logs,
-                Some(dispatcher),
-                1, // Outermost program at depth 1; CPI handler
-                   // increments before recursing.
-            ) {
+            if let Some(outcome) =
+                self.bpf_engine
+                    .try_execute(ix, accounts, &mut budget, &sysvars, logs)
+            {
                 return self.apply_validation(ix, accounts, outcome, policy, logs);
             }
         }
@@ -1733,7 +1696,7 @@ impl Default for HopperSvm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_sdk::system_instruction;
+    use solana_system_interface::instruction as system_instruction;
 
     /// SPL constants must equal the upstream IDs — guards against a
     /// silent drift of `spl-token::id()` that would point Hopper

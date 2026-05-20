@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hopper-svm"
-version = "0.1.0"
-description = "Python bindings for hopper-svm — in-process Solana execution harness for testing Hopper programs without a validator."
+version = "0.1.1"
+description = "Python bindings for hopper-svm, an in-process Solana execution harness for testing Hopper programs without a validator."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Software Development :: Testing",
 ]
 dependencies = [
-    # cffi is the canonical Python ↔ C bridge. We use the ABI mode
+    # cffi is the canonical Python to C bridge. We use the ABI mode
     # (no compilation step), so users only need a prebuilt
     # libhopper_svm_ffi shared library.
     "cffi >= 1.16",

@@ -13,7 +13,7 @@ use crate::account::KeyedAccount;
 use crate::{ASSOCIATED_TOKEN_PROGRAM_ID, SPL_TOKEN_PROGRAM_ID};
 use solana_program_pack::Pack;
 use solana_sdk::pubkey::Pubkey;
-use solana_sdk::system_program;
+use solana_system_interface::program as system_program;
 use spl_token::state::{
     Account as SplTokenAccount, AccountState as SplAccountState, Mint as SplMint,
 };

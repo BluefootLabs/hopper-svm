@@ -17,10 +17,7 @@
 use solana_program_runtime::{
     execution_budget::{SVMTransactionExecutionBudget, SVMTransactionExecutionCost},
     invoke_context::{BuiltinFunctionWithContext, EnvironmentConfig, InvokeContext},
-    loaded_programs::{
-        BlockRelation, ForkGraph, ProgramCacheEntry, ProgramCacheForTxBatch,
-        ProgramRuntimeEnvironments,
-    },
+    loaded_programs::{ProgramCacheEntry, ProgramCacheForTxBatch, ProgramRuntimeEnvironments},
     sysvar_cache::SysvarCache,
 };
 use solana_sdk::{
@@ -28,7 +25,6 @@ use solana_sdk::{
     hash::Hash,
     instruction::Instruction,
     pubkey::Pubkey,
-    slot_history::Slot,
     transaction_context::{InstructionAccount, TransactionContext},
 };
 use solana_svm_callback::InvokeContextCallback;
@@ -50,20 +46,6 @@ pub enum AgaveProgramKind {
     BpfV2,
     /// `.so` BPF program loaded via Loader v3 (upgradeable).
     BpfV3,
-}
-
-/// No-op fork graph. The harness has no fork-tracking concept; every
-/// program lives in the single shipping cache. Implementing the
-/// trait is mandatory for `ProgramCacheForTxBatch` plumbing.
-#[derive(Default)]
-struct UnitForkGraph;
-
-impl ForkGraph for UnitForkGraph {
-    fn relationship(&self, _a: Slot, _b: Slot) -> BlockRelation {
-        // The harness runs in a single, monotonic slot timeline.
-        // Every slot is an ancestor of every later slot.
-        BlockRelation::Equal
-    }
 }
 
 /// No-op `InvokeContextCallback`. The harness doesn't model
@@ -96,8 +78,6 @@ pub struct AgaveEngine {
     /// Per-program-id metadata so the engine knows which
     /// dispatch path each registered program takes.
     pub kinds: Arc<RwLock<HashMap<Pubkey, AgaveProgramKind>>>,
-    /// Fork graph the runtime requires. Single-timeline impl.
-    fork_graph: Arc<RwLock<UnitForkGraph>>,
     /// Default lamports-per-signature when constructing an
     /// `EnvironmentConfig`. Mainnet baseline is 5000; tests can
     /// override via [`set_lamports_per_signature`].
@@ -114,7 +94,6 @@ impl AgaveEngine {
             feature_set: Arc::new(SVMFeatureSet::all_enabled()),
             program_cache: Arc::new(RwLock::new(cache)),
             kinds: Arc::new(RwLock::new(HashMap::new())),
-            fork_graph: Arc::new(RwLock::new(UnitForkGraph)),
             lamports_per_signature: 5_000,
         }
     }
@@ -501,10 +480,8 @@ impl std::error::Error for AgaveEngineError {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_sdk::{
-        account::{Account, ReadableAccount},
-        system_instruction,
-    };
+    use solana_sdk::account::{Account, ReadableAccount};
+    use solana_system_interface::instruction as system_instruction;
 
     /// Smoke test: a fresh `AgaveEngine` constructs without panicking
     /// and reports no programs registered. Anchors the dep tree

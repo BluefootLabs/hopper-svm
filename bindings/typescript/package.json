@@ -1,7 +1,7 @@
 {
   "name": "@hopper/svm",
-  "version": "0.1.0",
-  "description": "TypeScript bindings for hopper-svm — in-process Solana execution harness for testing Hopper programs without a validator.",
+  "version": "0.1.1",
+  "description": "TypeScript bindings for hopper-svm, an in-process Solana execution harness for testing Hopper programs without a validator.",
   "license": "MIT OR Apache-2.0",
   "author": "BluefootLabs <contact@bluefootlabs.com>",
   "homepage": "https://hopperzero.dev",

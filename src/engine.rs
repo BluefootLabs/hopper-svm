@@ -4,17 +4,13 @@
 //! an instruction against a slice of accounts and a context, and
 //! the engine returns an [`ExecutionOutcome`]. Phase 1 ships one
 //! engine, the [`BuiltinEngine`], which dispatches into a registered
-//! [`BuiltinProgram`]. Phase 2 will ship a `BpfEngine` that wraps
-//! [`solana-sbpf`] for real `.so` execution; the harness will
-//! fall through to it when no built-in is registered for the
-//! program ID.
+//! [`BuiltinProgram`]. The BPF compatibility engine registers `.so`
+//! bytes through Agave so fallback execution uses Solana's loader and
+//! runtime crates.
 //!
 //! Why a trait? Because the seam is the only place "where does
 //! execution happen" is decided. Keeping it isolated means Phase 2
-//! lands as one new file (`bpf_engine.rs`), one new variant in the
-//! dispatch chain, and zero churn in any other module.
-//!
-//! [`solana-sbpf`]: https://crates.io/crates/solana-sbpf
+//! stays isolated to the dispatch chain.
 
 use crate::account::KeyedAccount;
 use crate::builtin::{BuiltinProgram, InvokeContext};
@@ -75,7 +71,7 @@ pub struct InnerInstruction {
     pub data: Vec<u8>,
     /// Stack height at which the CPI ran. 1 = the outermost
     /// program; 2 = a CPI from the outermost; 3 = a CPI from a
-    /// CPI; etc., capped at [`crate::bpf::context::MAX_CPI_DEPTH`].
+    /// CPI; etc.
     pub stack_height: u32,
 }
 

@@ -1,7 +1,6 @@
 //! Agave-runtime execution engine (Tier 3 / `agave-runtime` feature).
 //!
-//! Replaces the direct `solana-sbpf` invocation in
-//! [`crate::bpf::engine`] with the real validator stack:
+//! Owns the real validator-stack execution path:
 //! `solana-program-runtime`, `solana-bpf-loader-program`,
 //! `solana-compute-budget`. Syscall behaviour, CPI dispatch,
 //! sysvar handling, and account input/output serialization match
@@ -35,7 +34,7 @@
 //! The harness exposes the engine through
 //! [`crate::HopperSvm::with_agave_runtime`], a builder verb that
 //! flips the dispatch path from the inline `BuiltinProgram`
-//! registry + `solana-sbpf` direct interpreter to this Agave path.
+//! registry to this Agave path.
 //! Both engines stay available so a single test binary can compare
 //! results between them.
 

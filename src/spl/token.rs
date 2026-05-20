@@ -176,22 +176,6 @@ fn write_token_account(account: &mut KeyedAccount, token: &TokenAccount) {
     TokenAccount::pack(*token, &mut account.data).expect("TokenAccount::pack into 165-byte buffer");
 }
 
-/// Read the COption<Pubkey> wire shape: 4-byte LE flag + 32-byte
-/// pubkey. Used by `InitializeMint` for the freeze authority and
-/// by `Approve` for the delegate.
-fn read_coption_pubkey(body: &[u8], offset: usize) -> Option<Pubkey> {
-    if body.len() < offset + 4 {
-        return None;
-    }
-    let flag = u32::from_le_bytes(body[offset..offset + 4].try_into().unwrap());
-    if flag != 1 || body.len() < offset + 4 + 32 {
-        return None;
-    }
-    Some(Pubkey::new_from_array(
-        body[offset + 4..offset + 4 + 32].try_into().unwrap(),
-    ))
-}
-
 // ---------------------------------------------------------------------------
 // Tag 0 — InitializeMint
 // ---------------------------------------------------------------------------
@@ -896,7 +880,7 @@ mod tests {
 
         // 2. InitializeAccount for alice + bob.
         for token_acct in [1usize, 2] {
-            let mut data = vec![1u8]; // tag=1
+            let data = vec![1u8]; // tag=1
             let mut subset = vec![
                 accounts[token_acct].clone(),
                 accounts[0].clone(),              // mint

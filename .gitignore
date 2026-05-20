@@ -1,0 +1,23 @@
+/target/
+Cargo.lock
+
+# Local test fixtures and Agave program artifacts
+/programs/*.so
+/programs/*.so.dbg
+
+# Language binding outputs
+/bindings/typescript/dist/
+/bindings/typescript/node_modules/
+/bindings/python/build/
+/bindings/python/dist/
+/bindings/python/*.egg-info/
+
+# Local/editor state
+.env
+.env.*
+.vscode/
+.idea/
+*.log
+*.tmp
+Thumbs.db
+Desktop.ini
