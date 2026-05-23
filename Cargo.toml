@@ -16,13 +16,13 @@ categories = ["development-tools::testing"]
 members = [".", "hopper-svm-ffi"]
 resolver = "2"
 
-# Hopper-native execution engine. Owns the harness, the syscall layer
-# (Phase 2), CPI dispatch (Phase 2.1), the compute meter, the log
-# buffer, the sysvar surface, the built-in program registry, and all
-# Hopper-aware result decoding. Two layers:
+# Hopper-native execution engine. Owns the harness APIs, inline
+# simulators, account store, compute meter, log buffer, sysvar
+# controls, validation layer, and Hopper-aware result decoding. Two
+# layers:
 #
 # - **Phase 1 (default features)**: built-in program execution path
-#   only. Zero dependency on any external SVM. The system program
+#   only. Zero dependency on any external runtime. The system program
 #   ships as the reference built-in, plus user-registered Rust
 #   simulators for unit-test scenarios.
 #
@@ -39,11 +39,11 @@ default = []
 # and runtime crates instead of Hopper's retired direct-SBPF shim.
 bpf-execution = ["agave-runtime"]
 
-# Enable the Agave-runtime execution path. Replaces the direct
-# retired direct VM invocation with `solana-program-runtime` +
+# Enable the Agave-runtime execution path. Replaces the retired direct
+# VM invocation with `solana-program-runtime` +
 # `solana-bpf-loader-program`, so syscall behaviour, CPI dispatch,
-# sysvar handling, and account input/output serialization match
-# mainnet exactly (the same Agave crates the validator runs).
+# sysvar handling, and account input/output serialization come from
+# the same Agave crates the validator runs.
 # OFF BY DEFAULT because the Agave dep tree is large; enable with
 # `cargo test --features agave-runtime`.
 agave-runtime = [

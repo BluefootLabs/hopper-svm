@@ -53,7 +53,7 @@ let svm = HopperSvm::new().with_agave_runtime();
 let result = svm.process_instruction(&ix, &accounts);
 ```
 
-After `with_agave_runtime`, every `process_instruction` whose program ID is registered in the engine's program cache routes through `InvokeContext::process_instruction` instead of the inline registry. Behaviour matches mainnet because it is the validator's code. The system program is installed automatically; custom builtins register through `agave::AgaveEngine::add_builtin_function(id, account_size, BuiltinFunctionWithContext)`.
+After `with_agave_runtime`, every `process_instruction` whose program ID is registered in the engine's program cache routes through `InvokeContext::process_instruction` instead of the inline registry. Instruction loading, syscall behavior, CPI dispatch, and account serialization come from the validator crates; Hopper still owns the surrounding fixture model, account store, and result decoding. The system program is installed automatically; custom builtins register through `agave::AgaveEngine::add_builtin_function(id, account_size, BuiltinFunctionWithContext)`.
 
 End-to-end coverage in `src/agave/engine.rs::tests::system_transfer_through_agave_runtime` and `src/lib.rs::tests::process_instruction_routes_through_agave_runtime`: alice 1_000_000 → bob 250_000 transfer dispatches through Agave, balances flow back via `AccountSharedData`, the harness reports `>= 150 CU` consumed (Agave's system program declares that as its baseline).
 

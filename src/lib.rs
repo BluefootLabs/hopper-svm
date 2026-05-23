@@ -1,14 +1,11 @@
 //! # `hopper-svm` — Hopper-native in-process Solana execution
 //!
-//! A **Hopper-owned** test harness. Every layer above the eBPF
-//! interpreter — built-in program registry, syscall surface (Phase 2),
-//! CPI dispatch (Phase 2), compute metering, log buffer, sysvar state,
-//! account input/output serialization, and Hopper-aware result
-//! decoding — is implemented here from scratch. There is no
-//! `mollusk-svm` dependency, no `quasar-svm` dependency, no copy of
-//! anyone else's design. The harness is shaped around how Hopper
-//! programs actually want to be tested, with first-class hooks for
-//! Hopper headers, layout fingerprints, segment maps, and receipts.
+//! A **Hopper-owned** test harness. Hopper owns the fixture API,
+//! account store, inline simulators, validation layer, log capture,
+//! sysvar controls, compute reporting, and Hopper-aware result
+//! decoding. When callers need compiled BPF fidelity, Hopper delegates
+//! ELF loading and invocation to Agave's validator crates instead of
+//! maintaining a separate direct-SBPF runtime.
 //!
 //! ## Phase 1 (this release)
 //!
@@ -27,8 +24,8 @@
 //! - [`token`] — same factory helpers as before
 //!   (`create_keyed_system_account`, `create_keyed_mint_account`, …).
 //!   Token-account *state construction* is fully native (we serialize
-//!   the SPL wire shapes ourselves via `Pack`); running an SPL token
-//!   *program* requires Phase 2.
+//!   the SPL wire shapes ourselves via `Pack`); running a real SPL
+//!   token `.so` uses the Agave-backed runtime features.
 //!
 //! Phase 1 lets users write tests that exercise:
 //!
@@ -40,7 +37,7 @@
 //!   compiled `.so` for unit tests.
 //! - Anything that needs Hopper-aware decoding of post-state account
 //!   bytes (the layout-aware decoders work the same whether the
-//!   account state was produced by a built-in or a future BPF run).
+//!   account state was produced by an inline simulator or Agave BPF).
 //!
 //! ## Compatibility BPF path
 //!
@@ -193,9 +190,10 @@ impl std::error::Error for HopperSvmAgaveLoadError {}
 
 #[derive(Clone)]
 pub struct HopperSvm {
-    /// Map from program ID → registered built-in program. Phase 1
-    /// is a built-in-only execution path; Phase 2 falls through
-    /// to a `BpfEngine` for IDs not in this map.
+    /// Map from program ID to registered built-in program. The
+    /// inline registry is the fast default path; optional Agave and
+    /// BPF compatibility engines handle registered programs that need
+    /// validator-runtime fidelity.
     pub(crate) registry: Arc<Mutex<HashMap<Pubkey, Arc<dyn BuiltinProgram>>>>,
     /// Sysvar state — clock, rent, etc. User-settable so tests can
     /// move the clock forward, change rent rates, etc.
@@ -283,8 +281,9 @@ impl HopperSvm {
     /// through real Agave when the program is present in the engine,
     /// fall through to the inline registry otherwise.
     ///
-    /// This is the headline Tier 3 verb: behaviour now matches
-    /// mainnet exactly because it IS the validator's code.
+    /// This is the mainnet-fidelity verb: instruction execution uses
+    /// the validator's runtime crates while Hopper still owns the
+    /// surrounding fixture model.
     #[cfg(feature = "agave-runtime")]
     pub fn with_agave_runtime(self) -> Self {
         let engine = agave::AgaveEngine::new();
@@ -1461,10 +1460,11 @@ impl HopperSvm {
         };
         use solana_sdk::account::{Account as SolanaAccount, ReadableAccount};
 
-        // Translate KeyedAccount → (Pubkey, AccountSharedData). The
+        // Translate KeyedAccount -> (Pubkey, AccountSharedData). The
         // program account is appended at the end if not already in
         // the slice; Agave's runtime needs an account at
-        // `program_indices[0]` whose owner is `native_loader::id`.
+        // `program_indices[0]` owned by the matching native or BPF
+        // loader.
         let mut tx_accounts: Vec<(
             solana_sdk::pubkey::Pubkey,
             solana_sdk::account::AccountSharedData,
@@ -1486,7 +1486,7 @@ impl HopperSvm {
             None => {
                 let mut stub = SolanaAccount::default();
                 stub.executable = true;
-                stub.owner = solana_sdk::native_loader::id();
+                stub.owner = engine.invocation_owner_for(&ix.program_id);
                 tx_accounts.push((ix.program_id, stub.into()));
                 (tx_accounts.len() - 1) as u16
             }

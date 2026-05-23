@@ -9,10 +9,9 @@
 //!   programs from BPF (`.so`) programs at registration time.
 //!
 //! The engine is constructed empty (no programs) and built up via
-//! [`AgaveEngine::add_builtin`] for built-in programs (e.g. the
-//! system program, the Address Lookup Table program) and
-//! [`AgaveEngine::add_bpf_program`] for `.so` artifacts loaded by
-//! `solana-bpf-loader-program`.
+//! [`AgaveEngine::add_builtin`] for built-in programs (for example,
+//! the system program) and [`AgaveEngine::load_bpf_program`] for
+//! `.so` artifacts loaded by `solana-bpf-loader-program`.
 
 use solana_program_runtime::{
     execution_budget::{SVMTransactionExecutionBudget, SVMTransactionExecutionCost},
@@ -62,15 +61,17 @@ impl InvokeContextCallback for NoOpCallback {}
 /// real instruction.
 ///
 /// Constructed via [`AgaveEngine::new`]. Built-in programs are
-/// installed with [`AgaveEngine::add_builtin`] and BPF programs
-/// with [`AgaveEngine::add_bpf_program`]. The `process_instruction`
-/// surface (Phase 2) consumes a `TransactionContext` worth of
-/// accounts and dispatches via `InvokeContext::process_instruction`.
+/// installed with [`AgaveEngine::add_builtin`], and BPF programs are
+/// installed with [`AgaveEngine::load_bpf_program`] or
+/// [`AgaveEngine::add_bpf_program`]. Instruction dispatch consumes a
+/// `TransactionContext` worth of accounts and delegates to
+/// `InvokeContext::process_instruction`.
 #[derive(Clone)]
 pub struct AgaveEngine {
     /// Solana feature set in effect for executions. Defaults to
-    /// `SVMFeatureSet::all_enabled()` so the harness behaves like
-    /// mainnet at the latest activation horizon.
+    /// `SVMFeatureSet::all_enabled()` so instruction execution uses
+    /// the latest activation horizon available in the linked Agave
+    /// crates.
     pub feature_set: Arc<SVMFeatureSet>,
     /// Per-batch program cache. Built-ins land here directly;
     /// BPF programs land here after loading.
@@ -240,6 +241,19 @@ impl AgaveEngine {
         self.kinds.read().expect("kinds read").get(id).copied()
     }
 
+    /// Owner to use for a synthesized executable program account at
+    /// invocation time. Built-ins are native-loader-owned. BPF
+    /// programs must be owned by the loader variant they were loaded
+    /// under so Agave sees the same account shape it would see on a
+    /// validator.
+    pub fn invocation_owner_for(&self, id: &Pubkey) -> Pubkey {
+        match self.kind_for(id) {
+            Some(AgaveProgramKind::BpfV2) => solana_sdk::bpf_loader::id(),
+            Some(AgaveProgramKind::BpfV3) => solana_sdk::bpf_loader_upgradeable::id(),
+            Some(AgaveProgramKind::Builtin) | None => solana_sdk::native_loader::id(),
+        }
+    }
+
     /// Build an Agave [`SysvarCache`] from Hopper's sysvar shape.
     /// Hopper's `Clock` / `Rent` / etc. are local types that mirror
     /// the solana-sdk wire shape but are nominally distinct. Convert
@@ -304,9 +318,6 @@ impl AgaveEngine {
     /// [`TransactionContext`] populated from
     /// `(address, AccountSharedData)` pairs. The caller drives the
     /// resulting context through `process_instruction` (Phase 2
-    /// of this engine's bring-up will fold this into a single
-    /// `process` verb on the engine itself).
-    ///
     /// Returns the `TransactionContext` separately so the caller
     /// can read post-state out after invocation. The
     /// `program_cache` argument is borrowed mutably because Agave
@@ -352,8 +363,7 @@ impl AgaveEngine {
     /// can route the dispatch through the cache entry attached to
     /// that index.
     ///
-    /// This is the Phase-2 entry point. The
-    /// `_compute_budget` arg is wired through to `InvokeContext`'s
+    /// The `_compute_budget` arg is wired through to `InvokeContext`'s
     /// budget at construction; the caller's harness-level
     /// `ComputeBudget` is translated into the runtime shape.
     #[allow(clippy::too_many_arguments)]
@@ -386,10 +396,8 @@ impl AgaveEngine {
             execution_cost,
         );
 
-        // Build instruction_accounts: each meta entry plus its
-        // index in the transaction's account list. Agave's runtime
-        // expects de-duplicated entries when an account appears
-        // multiple times in the meta list.
+        // Build instruction_accounts: each meta entry plus its index
+        // in the transaction's account list.
         let mut instruction_accounts = Vec::<InstructionAccount>::with_capacity(ix.accounts.len());
         for (i, meta) in ix.accounts.iter().enumerate() {
             let index_in_tx = ctx
@@ -512,6 +520,34 @@ mod tests {
         assert_eq!(
             eng.kind_for(&solana_sdk::system_program::id()),
             Some(AgaveProgramKind::Builtin),
+        );
+    }
+
+    #[test]
+    fn invocation_owner_tracks_program_kind() {
+        let eng = AgaveEngine::new();
+        let builtin_id = Pubkey::new_unique();
+        let v2_id = Pubkey::new_unique();
+        let v3_id = Pubkey::new_unique();
+
+        {
+            let mut kinds = eng.kinds.write().expect("kinds write");
+            kinds.insert(builtin_id, AgaveProgramKind::Builtin);
+            kinds.insert(v2_id, AgaveProgramKind::BpfV2);
+            kinds.insert(v3_id, AgaveProgramKind::BpfV3);
+        }
+
+        assert_eq!(
+            eng.invocation_owner_for(&builtin_id),
+            solana_sdk::native_loader::id()
+        );
+        assert_eq!(
+            eng.invocation_owner_for(&v2_id),
+            solana_sdk::bpf_loader::id()
+        );
+        assert_eq!(
+            eng.invocation_owner_for(&v3_id),
+            solana_sdk::bpf_loader_upgradeable::id()
         );
     }
 
